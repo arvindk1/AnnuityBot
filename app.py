@@ -11,8 +11,6 @@ from botocore.exceptions import ClientError
 st.set_page_config(page_title="Annuity Master Bot", page_icon=None, layout="wide")
 
 # Constants
-TARGET_ACCOUNT_ID = '992382592107'
-ROLE_NAME = 'OrganizationAccountAccessRole'
 AGENT_ID = 'QYMNPZVEUJ'
 AGENT_ALIAS_ID = 'EHRB95AFLH'
 
@@ -32,29 +30,6 @@ def get_aws_credentials():
             'aws_session_token': os.environ.get('AWS_SESSION_TOKEN'),
             'region_name': os.environ.get('AWS_REGION', 'us-east-1')
         }
-
-# Function to assume role in the target account
-def assume_role(account_id, role_name):
-    sts_client = boto3.client('sts')
-    role_arn = f'arn:aws:iam::{account_id}:role/{role_name}'
-    try:
-        response = sts_client.assume_role(
-            RoleArn=role_arn,
-            RoleSessionName='BedrockAgentSession'
-        )
-        st.sidebar.success(f"Successfully assumed role in account {account_id}")
-        st.sidebar.write(f"Temporary credentials expire at: {response['Credentials']['Expiration']}")
-        return response['Credentials']
-    except ClientError as e:
-        st.error(f"Error assuming role: {e}")
-        st.error(f"Error Code: {e.response['Error']['Code']}")
-        st.error(f"Error Message: {e.response['Error']['Message']}")
-        if 'ResponseMetadata' in e.response:
-            st.error(f"Request ID: {e.response['ResponseMetadata'].get('RequestId')}")
-        return None
-    except Exception as e:
-        st.error(f"Unexpected error assuming role: {str(e)}")
-        return None
 
 # Function to initialize session state
 def init_state():
@@ -110,35 +85,20 @@ def list_agents():
 # Initialize session state
 init_state()
 
-# Set up AWS session using credentials and assume role
+# Set up AWS session using credentials
 try:
-    # First, create a session with the current credentials
+    # Create a session with the provided credentials
     session = boto3.Session(**get_aws_credentials())
 
-    # Assume role in the target account
-    credentials = assume_role(TARGET_ACCOUNT_ID, ROLE_NAME)
+    # Test the session
+    sts_client = session.client('sts')
+    account_id = sts_client.get_caller_identity()["Account"]
+    st.sidebar.success(f"Connected to AWS Account: {account_id}")
 
-    if credentials:
-        # Create a new session with the assumed role credentials
-        session = boto3.Session(
-            aws_access_key_id=credentials['AccessKeyId'],
-            aws_secret_access_key=credentials['SecretAccessKey'],
-            aws_session_token=credentials['SessionToken'],
-            region_name=get_aws_credentials()['region_name']
-        )
-
-        # Test the session
-        sts_client = session.client('sts')
-        account_id = sts_client.get_caller_identity()["Account"]
-        st.sidebar.success(f"Connected to AWS Account: {account_id}")
-
-        # Create AWS clients
-        dynamodb = session.resource('dynamodb')
-        bedrock_agent_runtime_client = session.client('bedrock-agent-runtime')
-        bedrock_client = session.client('bedrock')
-    else:
-        st.error("Failed to assume role in the target account.")
-        st.stop()
+    # Create AWS clients
+    dynamodb = session.resource('dynamodb')
+    bedrock_agent_runtime_client = session.client('bedrock-agent-runtime')
+    bedrock_client = session.client('bedrock')
 
 except Exception as e:
     st.sidebar.error(f"Error setting up AWS session: {str(e)}")
