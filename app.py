@@ -60,28 +60,6 @@ def log(prompt, response, agent_id, agent_alias_id):
     except ClientError as e:
         st.sidebar.error(f"Failed to log conversation: {str(e)}")
 
-# Function to list agents
-def list_agents():
-    try:
-        response = bedrock_client.list_agents()
-        st.write("Available Agents:")
-        for agent in response.get('agentSummaries', []):
-            st.write(f"Agent ID: {agent['agentId']}, Name: {agent['agentName']}")
-        
-        # List aliases for each agent
-        for agent in response.get('agentSummaries', []):
-            try:
-                alias_response = bedrock_client.list_agent_aliases(agentId=agent['agentId'])
-                st.write(f"Aliases for Agent {agent['agentName']}:")
-                for alias in alias_response.get('agentAliasSummaries', []):
-                    st.write(f"  Alias ID: {alias['agentAliasId']}, Name: {alias['agentAliasName']}")
-            except ClientError as e:
-                st.write(f"  Unable to list aliases for this agent: {e}")
-    except ClientError as e:
-        st.error(f"Error listing agents: {e}")
-    except Exception as e:
-        st.error(f"Unexpected error listing agents: {str(e)}")
-
 # Initialize session state
 init_state()
 
@@ -98,7 +76,6 @@ try:
     # Create AWS clients
     dynamodb = session.resource('dynamodb')
     bedrock_agent_runtime_client = session.client('bedrock-agent-runtime')
-    bedrock_client = session.client('bedrock')
 
 except Exception as e:
     st.sidebar.error(f"Error setting up AWS session: {str(e)}")
@@ -115,8 +92,6 @@ with st.sidebar:
         st.session_state.citations = []
         st.session_state.trace = {}
         st.session_state.session_id = str(uuid.uuid4())
-    if st.button("List Agents"):
-        list_agents()
 
 # Messages in the conversation
 for message in st.session_state.messages:
