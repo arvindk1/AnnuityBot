@@ -17,7 +17,7 @@ st.set_page_config(page_title="Annuity Master Bot", page_icon=None, layout="wide
 
 #us-west-2
 AGENT_ID = 'KXWRFB462G'
-AGENT_ALIAS_ID = 'MLYIL20IOO'
+AGENT_ALIAS_ID = 'EBTIJBBLSC'
 
 # Function to get AWS credentials
 def get_aws_credentials():
