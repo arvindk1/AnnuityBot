@@ -16,6 +16,23 @@ ROLE_NAME = 'OrganizationAccountAccessRole'
 AGENT_ID = 'QYMNPZVEUJ'
 AGENT_ALIAS_ID = 'EHRB95AFLH'
 
+# Function to get AWS credentials
+def get_aws_credentials():
+    try:
+        return {
+            'aws_access_key_id': st.secrets["AWS_ACCESS_KEY_ID"],
+            'aws_secret_access_key': st.secrets["AWS_SECRET_ACCESS_KEY"],
+            'aws_session_token': st.secrets.get("AWS_SESSION_TOKEN"),
+            'region_name': st.secrets.get("AWS_REGION", "us-east-1")
+        }
+    except KeyError:
+        return {
+            'aws_access_key_id': os.environ.get('AWS_ACCESS_KEY_ID'),
+            'aws_secret_access_key': os.environ.get('AWS_SECRET_ACCESS_KEY'),
+            'aws_session_token': os.environ.get('AWS_SESSION_TOKEN'),
+            'region_name': os.environ.get('AWS_REGION', 'us-east-1')
+        }
+
 # Function to assume role in the target account
 def assume_role(account_id, role_name):
     sts_client = boto3.client('sts')
@@ -28,8 +45,15 @@ def assume_role(account_id, role_name):
         st.sidebar.success(f"Successfully assumed role in account {account_id}")
         st.sidebar.write(f"Temporary credentials expire at: {response['Credentials']['Expiration']}")
         return response['Credentials']
+    except ClientError as e:
+        st.error(f"Error assuming role: {e}")
+        st.error(f"Error Code: {e.response['Error']['Code']}")
+        st.error(f"Error Message: {e.response['Error']['Message']}")
+        if 'ResponseMetadata' in e.response:
+            st.error(f"Request ID: {e.response['ResponseMetadata'].get('RequestId')}")
+        return None
     except Exception as e:
-        st.error(f"Error assuming role: {str(e)}")
+        st.error(f"Unexpected error assuming role: {str(e)}")
         return None
 
 # Function to initialize session state
@@ -86,15 +110,10 @@ def list_agents():
 # Initialize session state
 init_state()
 
-# Set up AWS session using environment variables and assume role
+# Set up AWS session using credentials and assume role
 try:
     # First, create a session with the current credentials
-    session = boto3.Session(
-        aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-        aws_session_token=os.environ.get('AWS_SESSION_TOKEN'),
-        region_name=os.environ.get('AWS_DEFAULT_REGION', 'us-east-1')
-    )
+    session = boto3.Session(**get_aws_credentials())
 
     # Assume role in the target account
     credentials = assume_role(TARGET_ACCOUNT_ID, ROLE_NAME)
@@ -105,7 +124,7 @@ try:
             aws_access_key_id=credentials['AccessKeyId'],
             aws_secret_access_key=credentials['SecretAccessKey'],
             aws_session_token=credentials['SessionToken'],
-            region_name=os.environ.get('AWS_DEFAULT_REGION', 'us-east-1')
+            region_name=get_aws_credentials()['region_name']
         )
 
         # Test the session
@@ -123,7 +142,7 @@ try:
 
 except Exception as e:
     st.sidebar.error(f"Error setting up AWS session: {str(e)}")
-    st.sidebar.error("Please ensure your AWS credentials are correctly set in environment variables.")
+    st.sidebar.error("Please ensure your AWS credentials are correctly set in environment variables or Streamlit secrets.")
     st.stop()
 
 # Main app title
