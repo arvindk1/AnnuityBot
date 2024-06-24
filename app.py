@@ -11,8 +11,13 @@ from botocore.exceptions import ClientError
 st.set_page_config(page_title="Annuity Master Bot", page_icon=None, layout="wide")
 
 # Constants
-AGENT_ID = 'QYMNPZVEUJ'
-AGENT_ALIAS_ID = 'EHRB95AFLH'
+# us-east-1
+# AGENT_ID = 'QYMNPZVEUJ'
+# AGENT_ALIAS_ID = 'EHRB95AFLH'
+
+#us-west-2
+AGENT_ID = 'KXWRFB462G'
+AGENT_ALIAS_ID = 'RNQOZSAHXQ'
 
 # Function to get AWS credentials
 def get_aws_credentials():
@@ -21,14 +26,16 @@ def get_aws_credentials():
             'aws_access_key_id': st.secrets["AWS_ACCESS_KEY_ID"],
             'aws_secret_access_key': st.secrets["AWS_SECRET_ACCESS_KEY"],
             'aws_session_token': st.secrets.get("AWS_SESSION_TOKEN"),
-            'region_name': st.secrets.get("AWS_REGION", "us-east-1")
+            # 'region_name': st.secrets.get("AWS_REGION", "us-east-1")
+            'region_name': st.secrets.get("AWS_REGION", "us-west-2")
         }
     except KeyError:
         return {
             'aws_access_key_id': os.environ.get('AWS_ACCESS_KEY_ID'),
             'aws_secret_access_key': os.environ.get('AWS_SECRET_ACCESS_KEY'),
             'aws_session_token': os.environ.get('AWS_SESSION_TOKEN'),
-            'region_name': os.environ.get('AWS_REGION', 'us-east-1')
+            # 'region_name': os.environ.get('AWS_REGION', 'us-east-1')
+            'region_name': os.environ.get('AWS_REGION', 'us-west-2')
         }
 
 # Function to initialize session state
